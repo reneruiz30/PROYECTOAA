@@ -1,0 +1,3 @@
+.streamlit/secrets.toml
+datos_supermercado.csv
+__pycache__/
