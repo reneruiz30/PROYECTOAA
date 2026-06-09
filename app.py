@@ -46,10 +46,9 @@ if st.session_state['user'] is None:
     user_info = login_form(
         url=url,
         apiKey=key,
-        providers=["google"],
-        redirectTo="http://localhost:8501"
+        providers=["google"]
     )
-    
+    git 
     if user_info:
         st.session_state['user'] = user_info
         st.rerun()
