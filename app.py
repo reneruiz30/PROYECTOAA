@@ -43,10 +43,11 @@ if st.session_state['user'] is None:
     st.title("🔐 Acceso a OPSO")
     st.write("Por favor, inicia sesión con tu cuenta autorizada para acceder al sistema.")
     
-    user_info = login_form(
+   user_info = login_form(
         url=url,
         apiKey=key,
-        providers=["google"]
+        providers=["google"],
+        redirectTo="http://localhost:8501"  # <-- ESTO ES CLAVE
     )
     
     if user_info:
