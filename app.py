@@ -40,20 +40,27 @@ if st.session_state['user'] is None:
     st.title("🔐 Acceso a OPSO")
     st.write("Por favor, inicia sesión con tu cuenta autorizada para acceder al sistema.")
     
-    # AQUÍ ESTÁ LA LÍNEA QUE FUERZA EL BOTÓN DE GOOGLE
-   user_info = login_form(
+    user_info = login_form(
         url=url,
-        apiKey=key,          # <--- Cambia api_key por apiKey (con K mayúscula)
-        providers=["google"] 
+        apiKey=key,
+        providers=["google"]
     )
     
     if user_info:
         st.session_state['user'] = user_info
         st.rerun()
-
 else:
     # --- BARRA LATERAL (NAVEGACIÓN) ---
-    email_usuario = st.session_state['user']['email']
+    usuario_data = st.session_state['user']
+    
+    # Extraemos el email de forma segura (Supabase suele anidarlo)
+    if isinstance(usuario_data, dict) and 'user' in usuario_data:
+        email_usuario = usuario_data['user'].get('email', '')
+    elif isinstance(usuario_data, dict):
+        email_usuario = usuario_data.get('email', '')
+    else:
+        email_usuario = getattr(getattr(usuario_data, 'user', None), 'email', getattr(usuario_data, 'email', ''))
+
     rol_usuario = obtener_rol(email_usuario)
 
     st.sidebar.title("Menú OPSO")
@@ -73,6 +80,7 @@ else:
     st.sidebar.info(f"Usuario: {email_usuario}\nRol: {rol_usuario.upper()}")
     
     if st.sidebar.button("Cerrar sesión"):
+        supabase.auth.sign_out() # <-- Esto destruye la sesión real en Supabase
         st.session_state['user'] = None
         st.rerun()
 
