@@ -31,8 +31,11 @@ def obtener_rol(email):
         respuesta = supabase.table("usuarios_perfiles").select("rol").eq("email", email).execute()
         if respuesta.data:
             return respuesta.data[0]['rol']
-        return 'analista'
-    except Exception:
+        else:
+            st.sidebar.warning("⚠️ Tu correo ingresó, pero no existe en la tabla 'usuarios_perfiles'.")
+            return 'analista'
+    except Exception as e:
+        st.sidebar.error(f"🚨 Error de Base de Datos: {e}")
         return 'analista'
 
 # --- LÓGICA DE LOGIN Y SEGURIDAD ---
