@@ -81,7 +81,8 @@ else:
     st.sidebar.markdown("---")
     st.sidebar.info(f"Usuario: {email_usuario}\nRol: {rol_usuario.upper()}")
     
-    # BOTÓN OSCURO ORIGINAL (CON SUPERPODERES DE JAVASCRIPT)
+
+    # BOTÓN OSCURO ORIGINAL (ACTUALIZADO A LA NUEVA VERSIÓN DE STREAMLIT)
     if st.sidebar.button("Cerrar sesión", key="btn_logout"):
         # 1. Cierra sesión en la base de datos
         try:
@@ -92,7 +93,7 @@ else:
         # 2. Limpia la memoria de la aplicación en Python
         st.session_state.clear()
         
-        # 3. Inyectamos JavaScript para destruir el token en el navegador y recargar
+        # 3. Inyectamos JavaScript con la nueva función permitida
         js_limpieza = """
         <script>
             // Accede al navegador general y borra los tokens de Google/Supabase
@@ -102,7 +103,12 @@ else:
             window.parent.location.href = 'https://nozhito-proyectoaa-app-x2ivi2.streamlit.app';
         </script>
         """
-        st.components.v1.html(js_limpieza, height=0)
+        # Método alternativo y 100% compatible para inyectar JS cuando st.components falla
+        st.markdown(js_limpieza, unsafe_allow_html=True)
+        try:
+            st.html(js_limpieza)
+        except Exception:
+            pass
 
     # --- 1. PÁGINA PRINCIPAL ---
     if eleccion == "Página Principal":
