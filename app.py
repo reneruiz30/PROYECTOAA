@@ -83,7 +83,7 @@ else:
     
     # 💥 BOTÓN OFICIAL QUE DESTRUYE EL TOKEN DEL NAVEGADOR
     with st.sidebar:
-        logout_button()
+        logout_button(url=url, apiKey=key)
     
     if st.sidebar.button("Cerrar sesión"):
         # 1. Cerrar sesión en Supabase
