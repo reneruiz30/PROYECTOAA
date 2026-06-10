@@ -38,6 +38,21 @@ def obtener_rol(email):
         st.sidebar.error(f"🚨 Error de Base de Datos: {e}")
         return 'analista'
 
+
+# --- NUEVO: PANTALLA DE CIERRE DE SESIÓN VIRTUAL ---
+# Si detectamos en la URL que el usuario quiso salir, bloqueamos el acceso
+if st.query_params.get("estado") == "logout":
+    st.title("🔐 Acceso a OPSO")
+    st.success("Has cerrado sesión exitosamente.")
+    st.info("Tu sesión en el panel está inactiva. Para volver a entrar, haz clic abajo.")
+    
+    if st.button("Volver a iniciar sesión"):
+        st.query_params.clear()
+        st.rerun()
+        
+    st.stop() # Esto detiene Python aquí mismo. ¡Nadie pasa sin presionar el botón!
+
+
 # --- LÓGICA DE LOGIN Y SEGURIDAD ---
 if st.session_state['user'] is None:
     st.title("🔐 Acceso a OPSO")
@@ -55,7 +70,8 @@ if st.session_state['user'] is None:
 else:
     # --- BARRA LATERAL (NAVEGACIÓN) ---
     usuario_data = st.session_state['user']
-    # Extraemos el email de forma segura (Supabase suele anidarlo)
+    
+    # Extraemos el email de forma segura
     if isinstance(usuario_data, dict) and 'user' in usuario_data:
         email_usuario = usuario_data['user'].get('email', '')
     elif isinstance(usuario_data, dict):
@@ -81,34 +97,20 @@ else:
     st.sidebar.markdown("---")
     st.sidebar.info(f"Usuario: {email_usuario}\nRol: {rol_usuario.upper()}")
     
-
-    # BOTÓN OSCURO ORIGINAL (ACTUALIZADO A LA NUEVA VERSIÓN DE STREAMLIT)
+    # --- BOTÓN OSCURO NATIVO (SOLUCIÓN SOFT LOGOUT) ---
     if st.sidebar.button("Cerrar sesión", key="btn_logout"):
-        # 1. Cierra sesión en la base de datos
+        # 1. Avisamos a Supabase en el lado del servidor
         try:
             supabase.auth.sign_out()
         except:
             pass
             
-        # 2. Limpia la memoria de la aplicación en Python
+        # 2. Borramos todos tus datos de la memoria
         st.session_state.clear()
         
-        # 3. Inyectamos JavaScript con la nueva función permitida
-        js_limpieza = """
-        <script>
-            // Accede al navegador general y borra los tokens de Google/Supabase
-            window.parent.localStorage.clear();
-            window.parent.sessionStorage.clear();
-            // Te devuelve a la URL raíz de tu proyecto
-            window.parent.location.href = 'https://nozhito-proyectoaa-app-x2ivi2.streamlit.app';
-        </script>
-        """
-        # Método alternativo y 100% compatible para inyectar JS cuando st.components falla
-        st.markdown(js_limpieza, unsafe_allow_html=True)
-        try:
-            st.html(js_limpieza)
-        except Exception:
-            pass
+        # 3. Le agregamos una etiqueta secreta a la URL para activar la pantalla de bloqueo
+        st.query_params["estado"] = "logout"
+        st.rerun()
 
     # --- 1. PÁGINA PRINCIPAL ---
     if eleccion == "Página Principal":
@@ -141,16 +143,11 @@ else:
         if st.button("🔄 Descargar datos desde Supabase"):
             with st.spinner("Conectando con la base de datos..."):
                 try:
-                    # Consultar todos los datos de la tabla usando la conexión global
                     respuesta = supabase.table("transacciones").select("*").execute()
                     
                     if respuesta.data:
-                        # Convertir la respuesta a un DataFrame de Pandas
                         df_nube = pd.DataFrame(respuesta.data)
-                        
-                        # Renombrar columnas para mantener compatibilidad con el resto del código
                         df_nube = df_nube.rename(columns={'id_factura': 'ID_Factura', 'producto': 'Producto'})
-                        
                         st.session_state['df_bruto'] = df_nube
                         st.success(f"¡Se descargaron {len(df_nube)} registros desde Supabase exitosamente!")
                     else:
@@ -159,7 +156,7 @@ else:
                 except Exception as e:
                     st.error(f"Error al conectar con Supabase: {e}\n(Asegúrate de haber configurado tu archivo .streamlit/secrets.toml correctamente).")
                     
-        # Procesamiento común (sin importar de dónde vinieron los datos)
+        # Procesamiento común
         if st.session_state['df_bruto'] is not None:
             df = st.session_state['df_bruto']
             st.success("¡Datos listos en memoria!")
