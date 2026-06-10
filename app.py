@@ -79,11 +79,18 @@ else:
         
     eleccion = st.sidebar.radio("Navegación", menu)
 
+    st.sidebar.markdown("---")
     st.sidebar.info(f"Usuario: {email_usuario}\nRol: {rol_usuario.upper()}")
     
-    # 💥 BOTÓN OFICIAL QUE DESTRUYE EL TOKEN DEL NAVEGADOR
+    # 💥 BOTÓN OFICIAL CON RECARGA AUTOMÁTICA
     with st.sidebar:
-        logout_button(url=url, apiKey=key)
+        click_salir = logout_button(url=url, apiKey=key)
+        
+        if click_salir:
+            # Limpiamos la memoria de la app
+            st.session_state.clear()
+            # Forzamos el reinicio visual instantáneo
+            st.rerun()
     
     if st.sidebar.button("Cerrar sesión"):
         # 1. Cerrar sesión en Supabase
