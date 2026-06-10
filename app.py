@@ -6,7 +6,6 @@ import matplotlib.patches as patches
 from fpdf import FPDF
 from supabase import create_client, Client
 from streamlit_supabase_auth import login_form
-from streamlit_supabase_auth import login_form, logout_button
 
 # Configuración básica de la página
 st.set_page_config(page_title="OPSO - Optimal Placement Stock", page_icon="🛒", layout="wide")
@@ -82,15 +81,28 @@ else:
     st.sidebar.markdown("---")
     st.sidebar.info(f"Usuario: {email_usuario}\nRol: {rol_usuario.upper()}")
     
-    # 💥 BOTÓN OFICIAL CON RECARGA AUTOMÁTICA
-    with st.sidebar:
-        click_salir = logout_button(url=url, apiKey=key)
+    # BOTÓN OSCURO ORIGINAL (CON SUPERPODERES DE JAVASCRIPT)
+    if st.sidebar.button("Cerrar sesión"):
+        # 1. Cierra sesión en la base de datos
+        try:
+            supabase.auth.sign_out()
+        except:
+            pass
+            
+        # 2. Limpia la memoria de la aplicación en Python
+        st.session_state.clear()
         
-        if click_salir:
-            # Limpiamos la memoria de la app
-            st.session_state.clear()
-            # Forzamos el reinicio visual instantáneo
-            st.rerun()
+        # 3. Inyectamos JavaScript para destruir el token en el navegador y recargar
+        js_limpieza = """
+        <script>
+            // Accede al navegador general y borra los tokens de Google/Supabase
+            window.parent.localStorage.clear();
+            window.parent.sessionStorage.clear();
+            // Te devuelve a la URL raíz de tu proyecto
+            window.parent.location.href = 'https://nozhito-proyectoaa-app-x2ivi2.streamlit.app';
+        </script>
+        """
+        st.components.v1.html(js_limpieza, height=0)
     
     if st.sidebar.button("Cerrar sesión"):
         # 1. Cerrar sesión en Supabase
