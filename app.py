@@ -152,7 +152,7 @@ if st.session_state["user"] is None:
             with st.form("form_login", border=False):
                 email_login = st.text_input(
                     "Correo electrónico",
-                    placeholder="nombre@gmail.com",
+                    placeholder="nombre@utp.ac.pa",
                 )
                 pass_login = st.text_input(
                     "Contraseña",
@@ -181,7 +181,7 @@ if st.session_state["user"] is None:
                 )
                 email_signup = st.text_input(
                     "Correo electrónico",
-                    placeholder="nombre@gmail.com",
+                    placeholder="nombre@utp.ac.pa",
                     key="su_email",
                 )
                 pass_signup = st.text_input(
@@ -275,9 +275,12 @@ else:
     # 2. CARGA DE DATOS
     # ════════════════════════════════════════════════════════════════════
     elif eleccion == "Carga de datos":
+        import random
+
         st.title("📂 Entrada y Preprocesamiento de Datos")
         st.write("Sube el archivo CSV con las transacciones del supermercado o conéctate a la base de datos.")
 
+        # ── Fuente 1: CSV local ───────────────────────────────────────
         archivo_subido = st.file_uploader("Cargar archivo CSV", type=["csv"])
         if archivo_subido is not None:
             df = pd.read_csv(archivo_subido)
@@ -291,29 +294,179 @@ else:
             else:
                 st.session_state["df_bruto"] = df
 
-        st.write("---")
-        st.write("O bien, sincroniza directamente con la base de datos en la nube:")
+        st.markdown("---")
 
-        if st.button("🔄 Descargar datos desde Supabase"):
-            with st.spinner("Conectando con la base de datos..."):
+        # ── Fuente 2: Supabase + Generador sintético ──────────────────
+        col_src1, col_src2 = st.columns(2)
+
+        with col_src1:
+            st.markdown("**☁️ Sincronizar con Supabase**")
+            st.caption("Descarga las transacciones reales almacenadas en la nube.")
+            if st.button("🔄 Descargar datos desde Supabase", use_container_width=True):
+                with st.spinner("Conectando con la base de datos..."):
+                    try:
+                        res = supabase.table("transacciones").select("*").execute()
+                        if res.data:
+                            df_nube = pd.DataFrame(res.data).rename(
+                                columns={"id_factura": "ID_Factura", "producto": "Producto"})
+                            st.session_state["df_bruto"] = df_nube
+                            st.success(f"¡Se descargaron {len(df_nube)} registros!")
+                        else:
+                            st.warning("La base de datos está vacía.")
+                    except Exception as e:
+                        st.error(f"Error al conectar con Supabase: {e}")
+
+        with col_src2:
+            st.markdown("**🧪 Generar datos sintéticos**")
+            st.caption("Crea facturas realistas y súbelas automáticamente a Supabase.")
+            n_facturas = st.number_input(
+                "Número de facturas a generar", min_value=10, max_value=2000,
+                value=200, step=50, key="n_sint"
+            )
+
+        # ── Generador sintético basado en perfiles de cliente ─────────
+        PERFILES = {
+            "Familiar": {
+                "productos": [
+                    "Leche", "Pan molde", "Huevos", "Arroz", "Frijoles",
+                    "Pollo entero", "Papel Higiénico", "Detergente",
+                    "Queso amarillo", "Aceite vegetal", "Azúcar", "Sal",
+                    "Salsa de tomate", "Pasta espagueti", "Jabón de lavar",
+                ],
+                "peso": 0.35,
+            },
+            "Parrillero_FinDeSemana": {
+                "productos": [
+                    "Carne de res", "Chorizo", "Carbón", "Cerveza",
+                    "Snacks", "Hielo", "Salsa BBQ", "Chuleta de cerdo",
+                    "Salchicha", "Servilletas", "Desechables (Platos)",
+                    "Papel Aluminio", "Maíz para asar", "Salsa Tabasco",
+                ],
+                "peso": 0.25,
+            },
+            "Estudiante_Rapido": {
+                "productos": [
+                    "Sopa instantánea", "Soda", "Galletas", "Pollo frito",
+                    "Café", "Cereal", "Comida congelada", "Atún en lata",
+                    "Pan de molde", "Mayonesa", "Bebida Energética",
+                    "Chocolates", "Agua embotellada",
+                ],
+                "peso": 0.25,
+            },
+            "Saludable": {
+                "productos": [
+                    "Pechuga de pollo", "Avena", "Yogur Griego",
+                    "Manzanas", "Espinaca", "Atún", "Té verde",
+                    "Aceite de oliva", "Almendras", "Granola",
+                    "Leche deslactosada", "Pasta integral", "Quinoa",
+                ],
+                "peso": 0.15,
+            },
+        }
+
+        # Productos de compra impulsiva cerca de la caja
+        PRODUCTOS_CAJA = [
+            "Goma de mascar", "Baterías", "Agua embotellada",
+            "Chocolates", "Chiclets", "Encendedor",
+        ]
+
+        def generar_factura(id_factura: str) -> list[dict]:
+            """
+            Genera una factura siguiendo el patrón de perfiles de cliente:
+            - Elige un perfil ponderado por su frecuencia real.
+            - Selecciona 3-6 productos de ese perfil.
+            - 25% de probabilidad de agregar un ítem de compra impulsiva en caja.
+            """
+            perfiles_keys = list(PERFILES.keys())
+            pesos = [PERFILES[p]["peso"] for p in perfiles_keys]
+            perfil_actual = random.choices(perfiles_keys, weights=pesos, k=1)[0]
+
+            pool = PERFILES[perfil_actual]["productos"]
+            n_prods = random.randint(3, min(6, len(pool)))
+            productos_comprados = random.sample(pool, n_prods)
+
+            # Compra impulsiva cerca de la caja (25 % de probabilidad)
+            if random.random() < 0.25:
+                productos_comprados.append(random.choice(PRODUCTOS_CAJA))
+
+            return [{"id_factura": id_factura, "producto": prod}
+                    for prod in productos_comprados]
+
+        # ── Botón de generación ───────────────────────────────────────
+        if st.button("🧪 Generar y subir datos sintéticos a Supabase",
+                     use_container_width=True, key="btn_sintetico"):
+
+            n_fact = int(n_facturas)
+            registros_total = []
+            # Prefijo F- + offset aleatorio para evitar colisiones con datos reales
+            base_id = random.randint(1_000, 9_000)
+
+            with st.spinner(f"Generando {n_fact} facturas por perfiles de cliente..."):
+                for i in range(1, n_fact + 1):
+                    id_fact = f"F-{base_id + i:05d}"
+                    registros_total.extend(generar_factura(id_fact))
+
+            # ── Estadísticas del lote generado ───────────────────────
+            df_preview = pd.DataFrame(registros_total).rename(
+                columns={"id_factura": "ID_Factura", "producto": "Producto"})
+
+            # Conteo por perfil (inferido por productos característicos)
+            total_lineas = len(registros_total)
+            prom_prods = total_lineas // n_fact
+
+            st.info(
+                f"✅ Se generaron **{total_lineas} líneas** en **{n_fact} facturas** "
+                f"· ~**{prom_prods} productos/factura** en promedio."
+            )
+
+            # Distribución de productos generados
+            top_prods = df_preview["Producto"].value_counts().head(8)
+            col_stat1, col_stat2 = st.columns([1, 1])
+            with col_stat1:
+                with st.expander("👁️ Vista previa (primeros 30 registros)"):
+                    st.dataframe(df_preview.head(30), use_container_width=True)
+            with col_stat2:
+                with st.expander("📊 Top 8 productos generados"):
+                    st.bar_chart(top_prods, color="#ff5b23")
+
+            # Subir en lotes de 500 (límite recomendado de Supabase)
+            LOTE = 500
+            lotes = [registros_total[i:i + LOTE] for i in range(0, len(registros_total), LOTE)]
+            prog = st.progress(0, text="Subiendo a Supabase…")
+            errores = []
+
+            for idx_lote, lote in enumerate(lotes):
                 try:
-                    res = supabase.table("transacciones").select("*").execute()
-                    if res.data:
-                        df_nube = pd.DataFrame(res.data).rename(
-                            columns={"id_factura": "ID_Factura", "producto": "Producto"})
-                        st.session_state["df_bruto"] = df_nube
-                        st.success(f"¡Se descargaron {len(df_nube)} registros desde Supabase!")
-                    else:
-                        st.warning("La base de datos está vacía.")
+                    supabase.table("transacciones").insert(lote).execute()
                 except Exception as e:
-                    st.error(f"Error al conectar con Supabase: {e}")
+                    errores.append(str(e))
+                prog.progress(
+                    (idx_lote + 1) / len(lotes),
+                    text=f"Subiendo lote {idx_lote + 1} / {len(lotes)}…"
+                )
 
+            prog.empty()
+
+            if errores:
+                st.warning(
+                    f"⚠️ Se subieron {len(lotes) - len(errores)}/{len(lotes)} lotes. "
+                    f"Errores: {'; '.join(errores[:3])}"
+                )
+            else:
+                st.success(
+                    f"🎉 ¡{len(registros_total)} registros subidos exitosamente a Supabase! "
+                    "Usa el botón **Descargar datos desde Supabase** para cargarlos."
+                )
+
+        st.markdown("---")
+
+        # ── Datos en memoria ──────────────────────────────────────────
         if st.session_state["df_bruto"] is not None:
             df = st.session_state["df_bruto"]
             st.success("¡Datos listos en memoria!")
 
             st.markdown("### 📊 Top 10 Productos Más Vendidos")
-            st.bar_chart(df["Producto"].value_counts().head(10), color="#E8673A")
+            st.bar_chart(df["Producto"].value_counts().head(10), color="#ff5b23")
 
             st.write("Vista previa de las transacciones:")
             st.dataframe(df.head())
@@ -334,6 +487,7 @@ else:
         if st.session_state["df_cesta"] is None:
             st.warning("⚠️ Primero ve a 'Carga de datos' y preprocesa tu información.")
         else:
+            # ── Controles manuales ────────────────────────────────────
             col1, col2 = st.columns(2)
             with col1:
                 min_soporte = st.slider("Soporte Mínimo (%)", 1, 50, 5) / 100.0
@@ -342,21 +496,114 @@ else:
                 min_confianza = st.slider("Confianza Mínima (%)", 10, 100, 50) / 100.0
                 st.caption("Ej: 0.50 → al comprar A, 50% de probabilidad de llevar B.")
 
-            if st.button("Ejecutar Algoritmo Apriori"):
-                with st.spinner("Buscando patrones frecuentes..."):
-                    itemsets = apriori(st.session_state["df_cesta"], min_support=min_soporte, use_colnames=True)
-                    if itemsets.empty:
-                        st.error("Sin patrones con estos parámetros. Baja el soporte.")
-                    else:
-                        reglas = association_rules(itemsets, metric="confidence", min_threshold=min_confianza)
-                        if reglas.empty:
-                            st.error("Sin reglas con esa confianza. Baja la confianza.")
-                        else:
-                            reglas["antecedents"] = reglas["antecedents"].apply(lambda x: ", ".join(list(x)))
-                            reglas["consequents"] = reglas["consequents"].apply(lambda x: ", ".join(list(x)))
-                            st.session_state["reglas"] = reglas
-                            st.success(f"¡Se encontraron {len(reglas)} reglas de asociación fuertes!")
+            col_b1, col_b2 = st.columns(2)
 
+            # ── Botón manual ──────────────────────────────────────────
+            with col_b1:
+                if st.button("▶ Ejecutar Algoritmo Apriori", use_container_width=True):
+                    with st.spinner("Buscando patrones frecuentes..."):
+                        itemsets = apriori(st.session_state["df_cesta"],
+                                           min_support=min_soporte, use_colnames=True)
+                        if itemsets.empty:
+                            st.error("Sin patrones con estos parámetros. Baja el soporte.")
+                        else:
+                            reglas = association_rules(itemsets, metric="confidence",
+                                                       min_threshold=min_confianza)
+                            if reglas.empty:
+                                st.error("Sin reglas con esa confianza. Baja la confianza.")
+                            else:
+                                reglas["antecedents"] = reglas["antecedents"].apply(
+                                    lambda x: ", ".join(list(x)))
+                                reglas["consequents"] = reglas["consequents"].apply(
+                                    lambda x: ", ".join(list(x)))
+                                st.session_state["reglas"] = reglas
+                                st.success(f"¡Se encontraron {len(reglas)} reglas de asociación!")
+
+            # ── Botón auto-entrenamiento ──────────────────────────────
+            with col_b2:
+                if st.button("🤖 Auto-entrenar (llenar estantes)", use_container_width=True):
+                    N_ESTANTES = 5
+                    cesta = st.session_state["df_cesta"]
+                    mejor_reglas = None
+                    mejor_params = None
+                    log_msgs = []
+
+                    # Búsqueda de grilla: soporte decreciente × confianza decreciente
+                    soportes   = [0.10, 0.07, 0.05, 0.03, 0.02, 0.01]
+                    confianzas = [0.70, 0.60, 0.50, 0.40, 0.30, 0.20]
+
+                    progress = st.progress(0, text="Iniciando búsqueda de parámetros óptimos…")
+                    total_combos = len(soportes) * len(confianzas)
+                    idx = 0
+
+                    for sp in soportes:
+                        for cf in confianzas:
+                            idx += 1
+                            progress.progress(
+                                idx / total_combos,
+                                text=f"Probando soporte={sp:.0%} · confianza={cf:.0%}…"
+                            )
+                            try:
+                                its = apriori(cesta, min_support=sp, use_colnames=True)
+                                if its.empty:
+                                    continue
+                                rls = association_rules(its, metric="confidence", min_threshold=cf)
+                                if rls.empty:
+                                    continue
+
+                                # Contar pares únicos disponibles (= estantes llenables)
+                                pares = set()
+                                for _, r in rls.iterrows():
+                                    pares.add(frozenset([
+                                        ", ".join(list(r["antecedents"])) if hasattr(r["antecedents"], "__iter__") and not isinstance(r["antecedents"], str) else r["antecedents"],
+                                        ", ".join(list(r["consequents"])) if hasattr(r["consequents"], "__iter__") and not isinstance(r["consequents"], str) else r["consequents"],
+                                    ]))
+
+                                log_msgs.append(
+                                    f"sp={sp:.0%} cf={cf:.0%} → {len(rls)} reglas, {len(pares)} pares únicos"
+                                )
+
+                                # Guardamos si supera el mínimo y mejora el lift promedio
+                                lift_avg = rls["lift"].mean()
+                                if len(pares) >= N_ESTANTES:
+                                    if mejor_reglas is None or lift_avg > mejor_reglas["lift"].mean():
+                                        mejor_reglas = rls.copy()
+                                        mejor_params = (sp, cf, len(pares), round(lift_avg, 3))
+
+                            except Exception:
+                                continue
+
+                    progress.empty()
+
+                    if mejor_reglas is not None:
+                        mejor_reglas["antecedents"] = mejor_reglas["antecedents"].apply(
+                            lambda x: ", ".join(list(x)) if not isinstance(x, str) else x)
+                        mejor_reglas["consequents"] = mejor_reglas["consequents"].apply(
+                            lambda x: ", ".join(list(x)) if not isinstance(x, str) else x)
+                        st.session_state["reglas"] = mejor_reglas
+
+                        sp, cf, n_pares, lift_avg = mejor_params
+                        st.success(
+                            f"✅ **Parámetros óptimos encontrados:** "
+                            f"Soporte = **{sp:.0%}** · Confianza = **{cf:.0%}**  \n"
+                            f"→ {len(mejor_reglas)} reglas · {n_pares} pares únicos · "
+                            f"Lift promedio = **{lift_avg}**"
+                        )
+
+                        with st.expander("📋 Ver log de búsqueda"):
+                            for msg in log_msgs:
+                                st.text(msg)
+                    else:
+                        st.error(
+                            "❌ No se encontró ninguna combinación de parámetros que genere "
+                            f"suficientes reglas para llenar {N_ESTANTES} estantes. "
+                            "Verifica que el dataset tenga suficientes transacciones."
+                        )
+                        with st.expander("📋 Ver log de búsqueda"):
+                            for msg in log_msgs:
+                                st.text(msg)
+
+            # ── Visualización de resultados ───────────────────────────
             if st.session_state["reglas"] is not None:
                 rules = st.session_state["reglas"]
 
@@ -377,15 +624,16 @@ else:
 
                 col_g1, col_g2 = st.columns(2)
                 with col_g1:
-                    st.markdown("###  Soporte vs Confianza")
+                    st.markdown("### 📈 Soporte vs Confianza")
                     st.info("El tamaño de la burbuja representa el Lift.")
                     if not tabla.empty:
-                        st.scatter_chart(data=reglas_vis, x="support", y="confidence", size="lift", color="#E8673A")
+                        st.scatter_chart(data=reglas_vis, x="support", y="confidence",
+                                         size="lift", color="#ff5b23")
                     else:
                         st.warning("No hay datos para graficar con ese filtro.")
 
                 with col_g2:
-                    st.markdown("###  Red de Compras Frecuentes")
+                    st.markdown("### 🕸️ Red de Compras Frecuentes")
                     st.info("Conexiones entre productos asociados.")
                     if not tabla.empty:
                         G = nx.DiGraph()
@@ -394,12 +642,12 @@ else:
                                        row["También compran (Consecuente)"],
                                        weight=row["Lift (Fuerza)"])
                         fig_net, ax_net = plt.subplots(figsize=(6, 6))
-                        fig_net.patch.set_facecolor("#1e1e2e")
-                        ax_net.set_facecolor("#1e1e2e")
+                        fig_net.patch.set_facecolor("#141414")
+                        ax_net.set_facecolor("#141414")
                         nx.draw(G, nx.spring_layout(G, k=0.8, seed=42),
-                                with_labels=True, node_color="#E8673A",
+                                with_labels=True, node_color="#ff5b23",
                                 node_size=2000, font_size=9, font_weight="bold",
-                                font_color="#ffffff", edge_color="#7c7c9e",
+                                font_color="#ffffff", edge_color="#18cccd",
                                 ax=ax_net, arrows=True, arrowsize=15, alpha=0.9)
                         st.pyplot(fig_net)
                     else:
@@ -418,80 +666,281 @@ else:
     # 4. SIMULACIÓN DE LAYOUT
     # ════════════════════════════════════════════════════════════════════
     elif eleccion == "Simulación de Layout":
-        st.title(" Simulación y Optimización del Layout")
+        st.title("🗺️ Simulación y Optimización del Layout")
 
+        # ── Colores por pasillo ───────────────────────────────────────
+        COLORES = ["#ff5b23", "#18cccd", "#fbbf24", "#a78bfa", "#4ade80"]
+
+        # ── Coordenadas fijas de 5 estantes en el plano ──────────────
+        # Cada entrada: [x, y, ancho, alto]
         COORDS = [
-            [1, 8, 4, 1, "#ffb3ba"], [6, 8, 3, 1, "#baffc9"],
-            [1, 4, 2, 3, "#ffdfba"], [4, 4, 2, 3, "#bae1ff"],
-            [7, 4, 2, 3, "#ffffba"],
+            [0.8, 7.8, 3.8, 1.4],   # superior izq
+            [5.4, 7.8, 3.8, 1.4],   # superior der
+            [0.8, 4.2, 2.6, 3.0],   # central izq
+            [4.0, 4.2, 2.6, 3.0],   # central mid
+            [6.6, 4.2, 2.6, 3.0],   # central der
         ]
 
-        # Layout tradicional
-        if st.session_state["df_bruto"] is not None:
-            prods = st.session_state["df_bruto"]["Producto"].value_counts().index.tolist()
-            estantes_actual = [
-                [c[0], c[1], c[2], c[3], f"Pasillo:\n{prods[i]}" if i < len(prods) else f"Vacío {i+1}", "#cccccc"]
-                for i, c in enumerate(COORDS)
-            ]
-        else:
-            estantes_actual = [
-                [1, 8, 8, 1, "Carnes y Embutidos", "#cccccc"],
-                [1, 4, 1.5, 3, "Lácteos\n(Leche, Queso)", "#cccccc"],
-                [3.5, 4, 1.5, 3, "Panadería\n(Pan, Huevos)", "#cccccc"],
-                [6, 4, 1.5, 3, "Bebidas\n(Soda, Cerveza)", "#cccccc"],
-                [8.5, 4, 1.5, 3, "Misceláneos", "#cccccc"],
-            ]
+        # ── Helper: nombre inteligente para un grupo de productos ─────
+        CATEGORIAS = {
+            "parrilla":   ["carne", "cerdo", "res", "pollo", "cerveza", "carbón", "carbón",
+                           "bbq", "salsa", "chorizo", "embutido"],
+            "desayuno":   ["pan", "huevo", "leche", "queso", "mantequilla", "café",
+                           "cereal", "avena", "jamón", "yogur"],
+            "bebidas":    ["soda", "refresco", "agua", "jugo", "cerveza", "vino",
+                           "bebida", "gaseosa", "té", "energética"],
+            "snacks":     ["snack", "chips", "galleta", "chocolate", "dulce", "caramelo",
+                           "maní", "palomita", "barra"],
+            "limpieza":   ["detergente", "jabón", "cloro", "papel", "toalla", "escoba",
+                           "desinfectante", "límpido", "suavizante"],
+            "abarrotes":  ["arroz", "frijol", "fideo", "pasta", "sopa", "atún",
+                           "sardina", "lata", "harina", "aceite", "sal", "azúcar"],
+            "frutas":     ["fruta", "verdura", "vegetal", "tomate", "cebolla", "ajo",
+                           "papaya", "mango", "piña", "plátano"],
+            "higiene":    ["shampoo", "cepillo", "pasta dental", "desodorante",
+                           "crema", "loción", "pañal", "toalla sanitaria"],
+        }
 
-        # Layout optimizado dinámico
-        estantes_opso, mapeados, slot = [], set(), 0
+        EMOJIS = {
+            "parrilla": "🔥", "desayuno": "🍳", "bebidas": "🥤",
+            "snacks": "🍿", "limpieza": "🧹", "abarrotes": "🛒",
+            "frutas": "🥦", "higiene": "🧴", "general": "📦",
+        }
+
+        def nombre_pasillo(productos: list[str]) -> tuple[str, str]:
+            """Devuelve (emoji + nombre corto, nombre completo descriptivo)."""
+            texto = " ".join(productos).lower()
+            scores = {cat: 0 for cat in CATEGORIAS}
+            for cat, keywords in CATEGORIAS.items():
+                for kw in keywords:
+                    if kw in texto:
+                        scores[cat] += 1
+            mejor = max(scores, key=scores.get)
+            if scores[mejor] == 0:
+                mejor = "general"
+            emoji = EMOJIS.get(mejor, "📦")
+            nombres_cap = {
+                "parrilla": "Zona Parrilla", "desayuno": "Zona Desayuno",
+                "bebidas": "Bebidas", "snacks": "Snacks & Dulces",
+                "limpieza": "Limpieza", "abarrotes": "Abarrotes",
+                "frutas": "Frutas & Verduras", "higiene": "Higiene Personal",
+                "general": "Pasillo General",
+            }
+            return f"{emoji} {nombres_cap[mejor]}", mejor
+
+        # ── Construir grupos de productos por pasillo (OPSO) ─────────
+        # Cada grupo = set de productos que van juntos
+        grupos_opso: list[set] = []      # lista de sets de productos
+        nombres_opso: list[str] = []     # nombre corto del pasillo
+        mapeados: set = set()
+
         if st.session_state["reglas"] is not None and not st.session_state["reglas"].empty:
             col_lift = "lift" if "lift" in st.session_state["reglas"].columns else "Lift (Fuerza)"
-            for _, row in st.session_state["reglas"].sort_values(col_lift, ascending=False).iterrows():
-                if slot >= 5: break
-                par = frozenset([row["antecedents"], row["consequents"]])
-                if par in mapeados: continue
+            reglas_sorted = st.session_state["reglas"].sort_values(col_lift, ascending=False)
+
+            for _, row in reglas_sorted.iterrows():
+                if len(grupos_opso) >= 5:
+                    break
+                ant = row["antecedents"]
+                con = row["consequents"]
+                par = frozenset([ant, con])
+                if par in mapeados:
+                    continue
                 mapeados.add(par)
-                c = COORDS[slot]
-                estantes_opso.append([c[0], c[1], c[2], c[3],
-                    f"Zona Opt.:\n({row['antecedents']} + {row['consequents']})", c[4]])
-                slot += 1
 
-        if slot < 5 and st.session_state["df_bruto"] is not None:
-            for prod in st.session_state["df_bruto"]["Producto"].value_counts().index:
-                if slot >= 5: break
-                if not any(prod in e[4] for e in estantes_opso):
-                    c = COORDS[slot]
-                    estantes_opso.append([c[0], c[1], c[2], c[3], f"Pasillo:\n{prod}", c[4]])
-                    slot += 1
+                # Productos del antecedente y consecuente
+                prods_ant = [p.strip() for p in ant.split(",")]
+                prods_con = [p.strip() for p in con.split(",")]
+                grupo = set(prods_ant + prods_con)
 
-        if not estantes_opso:
-            estantes_opso = [
-                [1, 8, 4, 1, "Zona Parrilla\n(Carnes, Cerveza, Carbón)", "#ffb3ba"],
-                [6, 8, 3, 1, "Zona Estudiante\n(Sopas, Soda, Snacks)", "#baffc9"],
-                [1, 4, 2, 3, "Zona Desayuno\n(Pan, Huevos, Leche)", "#ffdfba"],
-                [4, 4, 2, 3, "Abarrotes\n(Arroz, Frijoles)", "#bae1ff"],
-                [7, 4, 2, 3, "Limpieza\n(Papel, Detergente)", "#ffffba"],
+                # Intentar fusionar con un grupo existente si comparte productos
+                fusionado = False
+                for g in grupos_opso:
+                    if g & grupo:  # intersección
+                        g.update(grupo)
+                        fusionado = True
+                        break
+                if not fusionado and len(grupos_opso) < 5:
+                    grupos_opso.append(grupo)
+
+        # Rellenar slots vacíos con productos más frecuentes no asignados
+        if st.session_state["df_bruto"] is not None:
+            productos_frecuentes = st.session_state["df_bruto"]["Producto"].value_counts().index.tolist()
+            ya_asignados = {p for g in grupos_opso for p in g}
+            for prod in productos_frecuentes:
+                if len(grupos_opso) >= 5:
+                    break
+                if prod not in ya_asignados:
+                    grupos_opso.append({prod})
+                    ya_asignados.add(prod)
+
+        # Fallback si no hay datos
+        if not grupos_opso:
+            grupos_opso = [
+                {"Carnes", "Cerveza", "Carbón", "Salsa BBQ"},
+                {"Sopas", "Soda", "Snacks"},
+                {"Pan", "Huevos", "Leche", "Queso"},
+                {"Arroz", "Frijoles", "Atún"},
+                {"Papel Higiénico", "Detergente"},
             ]
 
-        st.markdown("### 🚶 Simulador de Recorrido de Compras")
-        opciones = [e[4].replace("\n", " ") for e in estantes_opso]
-        seleccion = st.multiselect("Seleccione los pasillos que visitará el cliente:", opciones)
-        indices_ruta = [opciones.index(z) for z in seleccion]
+        # Generar nombres inteligentes
+        nombres_opso = []
+        for g in grupos_opso:
+            nombre, _ = nombre_pasillo(list(g))
+            nombres_opso.append(nombre)
 
+        # ── Plano matplotlib: solo muestra número + nombre corto ──────
+        def dibujar_plano_v2(estantes_data, indices_ruta=None):
+            """
+            estantes_data: lista de (x, y, w, h, label_corto, color)
+            Dibuja sin texto superpuesto — solo un número de pasillo
+            grande y el nombre corto en dos líneas máximo.
+            """
+            fig, ax = plt.subplots(figsize=(7, 5.5))
+            fig.patch.set_facecolor("#0a0a0a")
+            ax.set_facecolor("#0a0a0a")
+            ax.set_xlim(0, 10)
+            ax.set_ylim(0, 10)
+            ax.axis("off")
+
+            # Cajas fijas: Entrada y Cajas
+            for rx, ry, rw, rh, rtxt, rclr in [
+                (0.5, 0.5, 2.5, 1.5, "CAJAS", "#2a2a2a"),
+                (7.0, 0.5, 2.5, 1.5, "ENTRADA", "#1a3a1a"),
+            ]:
+                ax.add_patch(patches.FancyBboxPatch(
+                    (rx, ry), rw, rh,
+                    boxstyle="round,pad=0.05",
+                    facecolor=rclr, edgecolor="#444", linewidth=1.2,
+                ))
+                ax.text(rx + rw / 2, ry + rh / 2, rtxt,
+                        ha="center", va="center", fontsize=9,
+                        fontweight="bold", color="#aaaaaa")
+
+            centros_x, centros_y = [], []
+            for i, (x, y, w, h, label, color) in enumerate(estantes_data):
+                en_ruta = indices_ruta and i in indices_ruta
+                # Borde naranja/cian si está en ruta
+                edge_color = "#ff5b23" if en_ruta else "#333333"
+                edge_lw    = 2.5 if en_ruta else 1.0
+
+                ax.add_patch(patches.FancyBboxPatch(
+                    (x, y), w, h,
+                    boxstyle="round,pad=0.08",
+                    facecolor=color + "22",   # muy transparente
+                    edgecolor=edge_color,
+                    linewidth=edge_lw,
+                ))
+
+                # Número grande centrado
+                cx, cy = x + w / 2, y + h / 2
+                ax.text(cx, cy + 0.18, str(i + 1),
+                        ha="center", va="center",
+                        fontsize=22, fontweight="bold",
+                        color=color, alpha=0.85)
+
+                # Nombre en dos líneas debajo del número
+                palabras = label.split()
+                mid = len(palabras) // 2 or 1
+                linea1 = " ".join(palabras[:mid])
+                linea2 = " ".join(palabras[mid:])
+                ax.text(cx, cy - 0.38,
+                        f"{linea1}\n{linea2}" if linea2 else linea1,
+                        ha="center", va="center",
+                        fontsize=6.5, fontweight="bold",
+                        color="#e0e0e0", linespacing=1.3)
+
+                centros_x.append(cx)
+                centros_y.append(cy)
+
+            # Ruta punteada
+            if indices_ruta and len(indices_ruta) > 0:
+                rx_path = [8.25] + [centros_x[i] for i in indices_ruta] + [1.75]
+                ry_path = [1.25] + [centros_y[i] for i in indices_ruta] + [1.25]
+                ax.plot(rx_path, ry_path,
+                        color="#18cccd", linestyle="--",
+                        linewidth=2.0, marker="o", markersize=5, alpha=0.9)
+
+            fig.tight_layout(pad=0.3)
+            return fig
+
+        # ── Preparar datos para los dos planos ───────────────────────
+        # Plano OPSO
+        estantes_opso_plot = [
+            [COORDS[i][0], COORDS[i][1], COORDS[i][2], COORDS[i][3],
+             nombres_opso[i], COLORES[i]]
+            for i in range(min(len(grupos_opso), 5))
+        ]
+
+        # Plano tradicional: un producto por pasillo (el más frecuente del grupo)
+        estantes_trad_plot = []
+        if st.session_state["df_bruto"] is not None:
+            prods_freq = st.session_state["df_bruto"]["Producto"].value_counts().index.tolist()
+            for i, c in enumerate(COORDS):
+                label = f"📦 {prods_freq[i]}" if i < len(prods_freq) else f"Vacío {i+1}"
+                estantes_trad_plot.append([c[0], c[1], c[2], c[3], label, "#555555"])
+        else:
+            fallback = ["🥩 Carnes", "🥛 Lácteos", "🍞 Panadería", "🥤 Bebidas", "📦 Varios"]
+            estantes_trad_plot = [
+                [COORDS[i][0], COORDS[i][1], COORDS[i][2], COORDS[i][3],
+                 fallback[i], "#555555"] for i in range(5)
+            ]
+
+        # ── Simulador de ruta ─────────────────────────────────────────
+        st.markdown("### 🚶 Simulador de Recorrido")
+        opciones_ruta = [f"Pasillo {i+1} — {nombres_opso[i]}" for i in range(len(grupos_opso))]
+        seleccion = st.multiselect("Seleccione los pasillos que visitará el cliente:", opciones_ruta)
+        indices_ruta = [opciones_ruta.index(z) for z in seleccion]
+
+        # ── Planos lado a lado ────────────────────────────────────────
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("Layout Inicial (Desorganizado)")
-            st.pyplot(dibujar_plano("Tradicional", estantes_actual, indices_ruta))
+            st.markdown("**Layout Tradicional** — por categoría genérica")
+            st.pyplot(dibujar_plano_v2(estantes_trad_plot, []))
         with col2:
-            st.subheader("Layout Optimizado (OPSO)")
-            st.pyplot(dibujar_plano("OPSO", estantes_opso, indices_ruta))
+            st.markdown("**Layout Optimizado OPSO** — por comportamiento de compra")
+            st.pyplot(dibujar_plano_v2(estantes_opso_plot, indices_ruta))
 
+        # ── Listas detalladas de productos por pasillo ────────────────
+        st.markdown("---")
+        st.markdown("### 🗂️ Distribución de Productos por Pasillo (OPSO)")
+        st.caption("Cada pasillo agrupa productos con alta afinidad de compra según el modelo Apriori.")
+
+        cols = st.columns(min(len(grupos_opso), 3))
+        for i, (grupo, nombre) in enumerate(zip(grupos_opso, nombres_opso)):
+            with cols[i % 3]:
+                color_hex = COLORES[i]
+                productos_lista = sorted(grupo)
+
+                st.markdown(
+                    f"""<div style="
+                        background: {color_hex}18;
+                        border: 1px solid {color_hex}55;
+                        border-top: 4px solid {color_hex};
+                        border-radius: 10px;
+                        padding: 14px 16px;
+                        margin-bottom: 12px;
+                    ">
+                    <p style="font-size:13px;font-weight:700;color:{color_hex};
+                               margin:0 0 8px;letter-spacing:0.02em;">
+                        {nombre} &nbsp;·&nbsp; Pasillo {i+1}
+                    </p>
+                    <ul style="margin:0;padding-left:16px;list-style:disc;">
+                        {"".join(f'<li style="font-size:13px;color:var(--c-text,#f5f5f5);line-height:1.7;">{p}</li>' for p in productos_lista)}
+                    </ul>
+                    </div>""",
+                    unsafe_allow_html=True,
+                )
+
+        # ── Enviar al panel gerencial ─────────────────────────────────
         st.markdown("---")
         if st.button("💾 Enviar Propuesta al Panel Gerencial"):
             try:
                 supabase.table("layouts_historial").insert({
                     "nombre_layout": f"Propuesta OPSO - {datetime.date.today()}",
-                    "asociaciones": str([e[4].replace("\n", " ") for e in estantes_opso]),
+                    "asociaciones": str([f"{nombres_opso[i]}: {', '.join(sorted(grupos_opso[i]))}"
+                                         for i in range(len(grupos_opso))]),
                     "creado_por": email_usuario,
                     "estado": "Pendiente",
                 }).execute()
@@ -503,7 +952,7 @@ else:
     # 5. REPORTES
     # ════════════════════════════════════════════════════════════════════
     elif eleccion == "Reportes":
-        st.title(" Salidas del Sistema y Reportes Gerenciales")
+        st.title("📊 Salidas del Sistema y Reportes Gerenciales")
 
         reglas = st.session_state.get("reglas")
 
@@ -547,7 +996,7 @@ else:
             st.warning("Ejecuta Apriori para calcular la proyección financiera.")
 
         # Matriz de movimientos
-        st.markdown("###  Matriz de Planificación de Movimientos")
+        st.markdown("### 📋 Matriz de Planificación de Movimientos")
         df_reporte = pd.DataFrame({
             "Zona Destino": ["Zona Parrilla", "Zona Estudiante", "Zona Desayuno", "Abarrotes", "Limpieza"],
             "Categorías Integradas": [
@@ -609,7 +1058,7 @@ else:
     # 6. PANEL GERENCIAL
     # ════════════════════════════════════════════════════════════════════
     elif eleccion == "Panel Gerencial":
-        st.title(" Panel de Decisiones Gerenciales")
+        st.title("🏢 Panel de Decisiones Gerenciales")
         st.write("Historial de propuestas de Layout para aprobación o rechazo.")
 
         try:
@@ -668,7 +1117,7 @@ else:
                 with col_m2: st.metric("Administradores", len(df_u[df_u["rol"] == "admin"]))
                 with col_m3: st.metric("Analistas y Gerentes", len(df_u[df_u["rol"] != "admin"]))
 
-                st.markdown("### Directorio de Cuentas")
+                st.markdown("### 📋 Directorio de Cuentas")
                 st.dataframe(df_u[["email", "rol"]], use_container_width=True)
 
                 st.markdown("---")

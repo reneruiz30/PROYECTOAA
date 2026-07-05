@@ -3,59 +3,59 @@
    Modo oscuro nativo + modo claro via prefers-color-scheme
 ══════════════════════════════════════════════════════════════ */
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* ────────────────────────────────────────
    MODO OSCURO (por defecto)
 ──────────────────────────────────────── */
 :root {
   /* Paleta base */
-  --c-orange: #ff5b23;
-  --c-orange-dim: rgba(255, 91, 35, 0.15);
-  --c-orange-hov: #e04d1a;
-  --c-cyan: #18cccd;
-  --c-cyan-dim: rgba(24, 204, 205, 0.13);
+  --c-orange:       #ff5b23;
+  --c-orange-dim:   rgba(255, 91, 35, 0.15);
+  --c-orange-hov:   #e04d1a;
+  --c-cyan:         #18cccd;
+  --c-cyan-dim:     rgba(24, 204, 205, 0.13);
 
   /* Fondos */
-  --c-bg: #0a0a0a;
-  --c-surface: #141414;
-  --c-surface-2: #1c1c1c;
-  --c-surface-3: #242424;
+  --c-bg:           #0a0a0a;
+  --c-surface:      #141414;
+  --c-surface-2:    #1c1c1c;
+  --c-surface-3:    #242424;
 
   /* Texto */
-  --c-text: #f5f5f5;
-  --c-muted: #fff1f1;
-  --c-label: #b0b0b0;
+  --c-text:         #f5f5f5;
+  --c-muted:        #ffffff;
+  --c-label:        #b0b0b0;
 
   /* Bordes */
-  --c-border: rgba(255, 255, 255, 0.07);
-  --c-border-med: rgba(255, 255, 255, 0.13);
+  --c-border:       rgba(255, 255, 255, 0.07);
+  --c-border-med:   rgba(255, 255, 255, 0.13);
 
   /* Semánticos */
-  --c-accent: var(--c-orange);
-  --c-accent-dim: var(--c-orange-dim);
-  --c-accent-hov: var(--c-orange-hov);
-  --c-secondary: var(--c-cyan);
-  --c-secondary-dim: var(--c-cyan-dim);
+  --c-accent:       var(--c-orange);
+  --c-accent-dim:   var(--c-orange-dim);
+  --c-accent-hov:   var(--c-orange-hov);
+  --c-secondary:    var(--c-cyan);
+  --c-secondary-dim:var(--c-cyan-dim);
 
-  --c-green: #4ade80;
-  --c-green-dim: rgba(74, 222, 128, 0.13);
-  --c-red: #f87171;
-  --c-red-dim: rgba(248, 113, 113, 0.13);
-  --c-amber: #fbbf24;
-  --c-amber-dim: rgba(251, 191, 36, 0.13);
-  --c-blue: #60a5fa;
-  --c-blue-dim: rgba(96, 165, 250, 0.13);
+  --c-green:        #4ade80;
+  --c-green-dim:    rgba(74, 222, 128, 0.13);
+  --c-red:          #f87171;
+  --c-red-dim:      rgba(248, 113, 113, 0.13);
+  --c-amber:        #fbbf24;
+  --c-amber-dim:    rgba(251, 191, 36, 0.13);
+  --c-blue:         #60a5fa;
+  --c-blue-dim:     rgba(96, 165, 250, 0.13);
 
   /* Forma */
-  --c-radius: 14px;
-  --c-radius-sm: 9px;
-  --c-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --c-radius:       14px;
+  --c-radius-sm:    9px;
+  --c-shadow:       0 8px 32px rgba(0, 0, 0, 0.6);
 
   /* Layout */
-  --content-max-w: 1160px;
-  --content-padding-x: 2.5rem;
-  --content-padding-y: 2rem;
+  --content-max-w:      1160px;
+  --content-padding-x:  2.5rem;
+  --content-padding-y:  2rem;
 }
 
 /* ────────────────────────────────────────
@@ -63,65 +63,61 @@
 ──────────────────────────────────────── */
 @media (prefers-color-scheme: light) {
   :root {
-    --c-bg: #f2f2f2;
-    --c-surface: #ffffff;
-    --c-surface-2: #ebebeb;
-    --c-surface-3: #e0e0e0;
+    --c-bg:          #f2f2f2;
+    --c-surface:     #ffffff;
+    --c-surface-2:   #ebebeb;
+    --c-surface-3:   #e0e0e0;
 
-    --c-text: #0f0f0f;
-    --c-muted: #5a5a5a;
-    --c-label: #3a3a3a;
+    --c-text:        #0f0f0f;
+    --c-muted:       #5a5a5a;
+    --c-label:       #3a3a3a;
 
-    --c-border: rgba(0, 0, 0, 0.08);
-    --c-border-med: rgba(0, 0, 0, 0.15);
+    --c-border:      rgba(0, 0, 0, 0.08);
+    --c-border-med:  rgba(0, 0, 0, 0.15);
 
-    --c-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    --c-shadow:      0 4px 20px rgba(0, 0, 0, 0.1);
 
-    --c-green-dim: rgba(22, 163, 74, 0.1);
-    --c-green: #16a34a;
-    --c-red-dim: rgba(220, 38, 38, 0.1);
-    --c-red: #dc2626;
-    --c-amber-dim: rgba(217, 119, 6, 0.1);
-    --c-amber: #d97706;
-    --c-blue-dim: rgba(37, 99, 235, 0.1);
-    --c-blue: #2563eb;
+    --c-green-dim:   rgba(22, 163, 74, 0.1);
+    --c-green:       #16a34a;
+    --c-red-dim:     rgba(220, 38, 38, 0.1);
+    --c-red:         #dc2626;
+    --c-amber-dim:   rgba(217, 119, 6, 0.1);
+    --c-amber:       #d97706;
+    --c-blue-dim:    rgba(37, 99, 235, 0.1);
+    --c-blue:        #2563eb;
   }
 }
 
 /* Streamlit también expone [data-theme] para el toggle interno */
 [data-theme="light"] {
-  --c-bg: #f2f2f2;
-  --c-surface: #ffffff;
-  --c-surface-2: #ebebeb;
-  --c-surface-3: #e0e0e0;
-  --c-text: #0f0f0f;
-  --c-muted: #5a5a5a;
-  --c-label: #3a3a3a;
-  --c-border: rgba(0, 0, 0, 0.08);
-  --c-border-med: rgba(0, 0, 0, 0.15);
-  --c-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  --c-green: #16a34a;
-  --c-green-dim: rgba(22, 163, 74, 0.1);
-  --c-red: #dc2626;
-  --c-red-dim: rgba(220, 38, 38, 0.1);
-  --c-amber: #d97706;
-  --c-amber-dim: rgba(217, 119, 6, 0.1);
-  --c-blue: #2563eb;
-  --c-blue-dim: rgba(37, 99, 235, 0.1);
+  --c-bg:          #f2f2f2;
+  --c-surface:     #ffffff;
+  --c-surface-2:   #ebebeb;
+  --c-surface-3:   #e0e0e0;
+  --c-text:        #0f0f0f;
+  --c-muted:       #5a5a5a;
+  --c-label:       #3a3a3a;
+  --c-border:      rgba(0, 0, 0, 0.08);
+  --c-border-med:  rgba(0, 0, 0, 0.15);
+  --c-shadow:      0 4px 20px rgba(0, 0, 0, 0.1);
+  --c-green:       #16a34a;
+  --c-green-dim:   rgba(22, 163, 74, 0.1);
+  --c-red:         #dc2626;
+  --c-red-dim:     rgba(220, 38, 38, 0.1);
+  --c-amber:       #d97706;
+  --c-amber-dim:   rgba(217, 119, 6, 0.1);
+  --c-blue:        #2563eb;
+  --c-blue-dim:    rgba(37, 99, 235, 0.1);
 }
 
 /* ════════════════════════════════════════
    BASE
 ════════════════════════════════════════ */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+*, *::before, *::after { box-sizing: border-box; }
 
 .stApp {
   background-color: var(--c-bg) !important;
-  font-family: "Inter", "Segoe UI", system-ui, sans-serif !important;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif !important;
   color: var(--c-text) !important;
 }
 
@@ -153,9 +149,7 @@
   }
 }
 
-[data-testid="column"] {
-  min-width: 0 !important;
-}
+[data-testid="column"] { min-width: 0 !important; }
 
 /* ════════════════════════════════════════
    SIDEBAR
@@ -170,9 +164,7 @@
 }
 
 /* Nav items */
-[data-testid="stSidebar"] .stRadio > div {
-  gap: 2px !important;
-}
+[data-testid="stSidebar"] .stRadio > div { gap: 2px !important; }
 
 [data-testid="stSidebar"] .stRadio label {
   background: transparent !important;
@@ -184,10 +176,7 @@
   font-weight: 500 !important;
   color: var(--c-muted) !important;
   cursor: pointer !important;
-  transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s !important;
+  transition: background 0.15s, color 0.15s, border-color 0.15s !important;
   display: flex !important;
   align-items: center !important;
   gap: 10px !important;
@@ -209,9 +198,7 @@
   border-left-color: var(--c-accent) !important;
 }
 
-[data-testid="stSidebar"] .stRadio input[type="radio"] {
-  display: none !important;
-}
+[data-testid="stSidebar"] .stRadio input[type="radio"] { display: none !important; }
 
 /* Títulos sidebar */
 [data-testid="stSidebar"] h1,
@@ -277,16 +264,13 @@ h3 {
   color: var(--c-text) !important;
 }
 
-p,
-.stMarkdown p,
-.stMarkdown li {
+p, .stMarkdown p, .stMarkdown li {
   font-size: 14.5px !important;
   color: var(--c-muted) !important;
   line-height: 1.7 !important;
 }
 
-label,
-[data-testid="stWidgetLabel"] p {
+label, [data-testid="stWidgetLabel"] p {
   font-size: 13px !important;
   font-weight: 500 !important;
   color: var(--c-label) !important;
@@ -300,9 +284,7 @@ label,
   border: 1px solid var(--c-border) !important;
   border-radius: var(--c-radius) !important;
   padding: 18px 20px !important;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s !important;
+  transition: border-color 0.2s, box-shadow 0.2s !important;
 }
 
 [data-testid="stMetric"]:hover {
@@ -361,9 +343,7 @@ label,
   font-weight: 600 !important;
   padding: 10px 22px !important;
   letter-spacing: 0.01em !important;
-  transition:
-    background 0.15s,
-    transform 0.1s !important;
+  transition: background 0.15s, transform 0.1s !important;
 }
 
 .stButton > button:hover {
@@ -371,9 +351,7 @@ label,
   transform: translateY(-1px) !important;
 }
 
-.stButton > button:active {
-  transform: scale(0.98) !important;
-}
+.stButton > button:active { transform: scale(0.98) !important; }
 
 /* ════════════════════════════════════════
    SLIDERS
@@ -471,9 +449,7 @@ hr {
   padding: 8px 6px !important;
   text-align: center !important;
   white-space: nowrap !important;
-  transition:
-    background 0.15s,
-    color 0.15s !important;
+  transition: background 0.15s, color 0.15s !important;
 }
 
 .stTabs [aria-selected="true"] {
@@ -502,9 +478,7 @@ hr {
   border-radius: var(--c-radius-sm) !important;
   font-size: 14px !important;
   color: var(--c-text) !important;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
 }
 
 [data-testid="stSelectbox"] > div > div:focus-within,
@@ -649,20 +623,10 @@ div[role="dialog"] h2 {
 /* ════════════════════════════════════════
    SCROLLBAR
 ════════════════════════════════════════ */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--c-surface-3);
-  border-radius: 99px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--c-orange);
-}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--c-surface-3); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--c-orange); }
 
 /* ════════════════════════════════════════
    LOGIN — shell, logo, tabs
@@ -677,7 +641,7 @@ div[role="dialog"] h2 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: .5rem;
   margin-bottom: 2rem;
 }
 
@@ -708,10 +672,7 @@ div[role="dialog"] h2 {
 }
 
 @media (max-width: 480px) {
-  .login-shell {
-    margin-top: 2rem;
-    padding: 0 0.75rem;
-  }
+  .login-shell { margin-top: 2rem; padding: 0 .75rem; }
 }
 
 /* Hint del tab Google */
@@ -751,12 +712,8 @@ div[role="dialog"] h2 {
     flex: 0 0 100% !important;
   }
 
-  h1 {
-    font-size: 22px !important;
-  }
-  h2 {
-    font-size: 17px !important;
-  }
+  h1 { font-size: 22px !important; }
+  h2 { font-size: 17px !important; }
 
   .main .block-container {
     padding-left: 0.75rem !important;
